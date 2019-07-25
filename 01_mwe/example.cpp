@@ -589,7 +589,7 @@ void Example::createPipeline(void)
         .pNext      = nullptr,
         .flags      = 0,
         .codeSize   = fragmentShaderCode.size(),
-        .pCode      = reinterpret_cast<const uint32_t *>(m_fragmentShaderCode.data()),
+        .pCode      = reinterpret_cast<const uint32_t *>(fragmentShaderCode.data()),
     };
 
     VkShaderModule fragmentShaderModule;
