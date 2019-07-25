@@ -1,0 +1,15 @@
+CMAKE_MINIMUM_REQUIRED (VERSION 3.14)
+PROJECT (MWE_VULKAN)
+
+IF(DEFINED ENV{VULKAN_SDK})
+MESSAGE("Vulkan environment variable defined.")
+ELSE()
+MESSAGE("Vulkan environment variable not defined")
+ENDIF()
+
+SET(CMAKE_BUILD_TYPE Debug)
+
+INCLUDE_DIRECTORIES($ENV{VULKAN_SDK}/Include)
+LINK_DIRECTORIES($ENV{VULKAN_SDK}/Source/lib .)
+ADD_EXECUTABLE (example example.cpp main.cpp)
+TARGET_LINK_LIBRARIES(example glfw3 vulkan-1.lib)
