@@ -73,7 +73,7 @@ void Example::run(void)
     while (!glfwWindowShouldClose(m_window))
     {
         glfwPollEvents();
-        DrawFrame();
+        drawFrame();
     }
 }
 
@@ -846,7 +846,7 @@ void Example::createCommandBuffers(void)
         .commandBufferCount = (uint32_t) m_commandBuffers.size(),
     };
     result = vkAllocateCommandBuffers(m_device, &cbai, m_commandBuffers.data());
-    printResult(result, "Command buffer allication result");
+    printResult(result, "Command buffer allocation result");
 
     VkCommandBufferBeginInfo cbbi = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -860,6 +860,7 @@ void Example::createCommandBuffers(void)
         .sType          = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext          = NULL,
         .renderPass     = m_renderPass,
+        .framebuffer    = m_framebuffers[m_submissionNumber],
         .renderArea     = {{0, 0}, {640u, 480u}},
         .clearValueCount = 2u,
         .pClearValues   = clearValues,
@@ -914,7 +915,7 @@ void Example::createFences(void)
     }
 }
 
-void Example::DrawFrame(void)
+void Example::drawFrame(void)
 {
     VkResult result;
     uint32_t nextImageIndex;
@@ -949,18 +950,19 @@ void Example::DrawFrame(void)
         m_submissionNumber = (m_submissionNumber + 1u) % m_maxInflightSubmissions;
 
         /* Queue the image for presentation */
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.pNext = NULL;
-        presentInfo.waitSemaphoreCount = 1u;
-        presentInfo.pWaitSemaphores = &m_renderDoneSemaphore;
-        presentInfo.swapchainCount = 1u;
-        presentInfo.pSwapchains = &m_swapchain;
-        presentInfo.pImageIndices = &nextImageIndex;
-        presentInfo.pResults = NULL;
+        presentInfo.sType               = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        presentInfo.pNext               = NULL;
+        presentInfo.waitSemaphoreCount  = 1u;
+        presentInfo.pWaitSemaphores     = &m_renderDoneSemaphore;
+        presentInfo.swapchainCount      = 1u;
+        presentInfo.pSwapchains         = &m_swapchain;
+        presentInfo.pImageIndices       = &nextImageIndex;
+        presentInfo.pResults            = NULL;
 
         VkQueue presentQueue;
         vkGetDeviceQueue(m_device, 0u, m_present_queue_idx, &presentQueue);
         result = vkQueuePresentKHR(presentQueue, &presentInfo);
+        printResult(result, "Presenting image result");
     }
 }
 

@@ -102,7 +102,7 @@ class Example
         std::vector<VkCommandBuffer> m_commandBuffers;
         
     public:
-        void DrawFrame(void);
+        void drawFrame(void);
         void InitExample(void);
 
         int32_t createWindow(void);
