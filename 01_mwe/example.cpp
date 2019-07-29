@@ -10,12 +10,12 @@ static Vertex my_cube[] =
     {VERTEX_1, COLOR_RED}, {VERTEX_4, COLOR_RED}, {VERTEX_3, COLOR_RED},
     
     /* right side */
-    {VERTEX_2, COLOR_RED}, {VERTEX_5, COLOR_RED}, {VERTEX_3, COLOR_RED},
-    {VERTEX_5, COLOR_RED}, {VERTEX_7, COLOR_RED}, {VERTEX_3, COLOR_RED},
+    {VERTEX_2, COLOR_GREEN}, {VERTEX_5, COLOR_GREEN}, {VERTEX_3, COLOR_GREEN},
+    {VERTEX_5, COLOR_GREEN}, {VERTEX_7, COLOR_GREEN}, {VERTEX_3, COLOR_GREEN},
     
     /* left side */
-    {VERTEX_1, COLOR_RED}, {VERTEX_6, COLOR_RED}, {VERTEX_8, COLOR_RED},
-    {VERTEX_1, COLOR_RED}, {VERTEX_4, COLOR_RED}, {VERTEX_8, COLOR_RED},
+    {VERTEX_1, COLOR_BLUE}, {VERTEX_6, COLOR_BLUE}, {VERTEX_8, COLOR_BLUE},
+    {VERTEX_1, COLOR_BLUE}, {VERTEX_4, COLOR_BLUE}, {VERTEX_8, COLOR_BLUE},
 
     /* top side */
     {VERTEX_4, COLOR_RED}, {VERTEX_7, COLOR_RED}, {VERTEX_3, COLOR_RED},
@@ -73,6 +73,7 @@ void Example::run(void)
     while (!glfwWindowShouldClose(m_window))
     {
         glfwPollEvents();
+        DrawFrame();
     }
 }
 
@@ -188,6 +189,8 @@ void Example::createDevice(void)
 
     vkGetPhysicalDeviceQueueFamilyProperties(m_available_devices[m_selected_device], &queue_count, &queue_family_properties[0]);
 
+    
+
     /* select queue with graphics and present capabilities */
     uint8_t i = 0u;
     VkBool32 presentSupport;
@@ -286,7 +289,7 @@ void Example::createSwapchain(void)
     if ((m_surfaceCapabilities.maxImageCount > 2u) || (m_surfaceCapabilities.maxImageCount == 0u))
     {
         m_isTrippleBufferingSupported = VK_TRUE;
-        m_selectedBufferingMode = TRIPPLE_BUFFERING;
+        //m_selectedBufferingMode = TRIPPLE_BUFFERING;
     }
 
     if (TRIPPLE_BUFFERING == m_selectedBufferingMode)
@@ -358,6 +361,68 @@ void Example::createImageViews(void)
     }
 }
 
+void Example::createDepthResources(void)
+{
+    VkResult result;
+    
+    /* TODO Which format is the best? How to guarantee functionality */
+    VkFormatProperties formatProperties;
+    vkGetPhysicalDeviceFormatProperties(m_available_devices[m_selected_device], VK_FORMAT_D32_SFLOAT, &formatProperties);
+
+    std::cout << std::hex << formatProperties.optimalTilingFeatures << std::endl;
+    std::cout << std::hex << formatProperties.linearTilingFeatures  << std::endl;
+
+    VkImageCreateInfo imageInfo =
+    {
+        .sType                  = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext                  = nullptr,
+        .flags                  = 0,
+        .imageType              = VK_IMAGE_TYPE_2D,
+        .format                 = VK_FORMAT_D32_SFLOAT,
+        .extent                 = {640, 480, 1},
+        .mipLevels              = 1u,
+        .arrayLayers            = 1u,
+        .samples                = VK_SAMPLE_COUNT_1_BIT,
+        .tiling                 = VK_IMAGE_TILING_OPTIMAL,
+        .usage                  = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        .sharingMode            = VK_SHARING_MODE_EXCLUSIVE,
+        .initialLayout          = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    result = vkCreateImage(m_device, &imageInfo, nullptr, &m_depthImage);
+    printResult(result, "Depth image creation result");
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(m_device, m_depthImage, &memRequirements);
+
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(m_available_devices[m_selected_device], &memProperties);
+
+    VkMemoryAllocateInfo mai = 
+    {
+        .sType              = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext              = nullptr,
+        .allocationSize     = memRequirements.size,
+        .memoryTypeIndex    = 0u,
+    };
+
+    vkAllocateMemory(m_device, &mai, nullptr, &m_depthImageMemory);
+    vkBindImageMemory(m_device, m_depthImage, m_depthImageMemory, 0u);
+    VkImageViewCreateInfo ivci =
+    {
+        .sType              = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext              = nullptr,
+        .flags              = 0,
+        .image              = m_depthImage,
+        .viewType           = VK_IMAGE_VIEW_TYPE_2D,
+        .format             = VK_FORMAT_D32_SFLOAT,
+        .components         = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY},
+        .subresourceRange   = {VK_IMAGE_ASPECT_DEPTH_BIT, 0u, 1u, 0u, 1u},
+    };
+    result = vkCreateImageView(m_device, &ivci, nullptr, &m_depthImageView);
+    printResult(result, "Depth buffer image view creation result");
+}
+
 void Example::createRenderPass(void)
 {
     VkResult result;
@@ -366,7 +431,7 @@ void Example::createRenderPass(void)
         /* Color attachment */
         {
             .flags          = 0,
-            .format         = VK_FORMAT_R8G8B8_SNORM,
+            .format         = VK_FORMAT_R8G8B8A8_SRGB,
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp        = VK_ATTACHMENT_STORE_OP_STORE,
@@ -378,7 +443,7 @@ void Example::createRenderPass(void)
         /* Depth attachment */
         {
             .flags          = 0,
-            .format         = VK_FORMAT_R8G8B8A8_SNORM,
+            .format         = VK_FORMAT_D32_SFLOAT,
             .samples        = VK_SAMPLE_COUNT_1_BIT,
             .loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -386,7 +451,6 @@ void Example::createRenderPass(void)
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-
         }
     };
 
@@ -439,7 +503,7 @@ void Example::createRenderPass(void)
     printResult(result, "Renderpass creation result");
 }
 
-void Example::createFrameBuffers(void)
+void Example::createFramebuffers(void)
 {
     VkResult result;
     VkFramebufferCreateInfo fci =
@@ -448,15 +512,23 @@ void Example::createFrameBuffers(void)
         .pNext              = nullptr,
         .flags              = 0,
         .renderPass         = m_renderPass,
-        .attachmentCount    = 0u,
+        .attachmentCount    = 2u,
         .pAttachments       = nullptr,
         .width              = m_surfaceCapabilities.currentExtent.width,
         .height             = m_surfaceCapabilities.currentExtent.height,
         .layers             = 1u,
     };
 
-    result = vkCreateFramebuffer(m_device, &fci, nullptr, &m_framebuffer);
-    printResult(result, "Framebuffer creation result");
+    m_framebuffers.resize(m_swapchainImageViews.size());
+
+    for (uint8_t i = 0; i < m_swapchainImageViews.size(); i++)
+    {
+        VkImageView attachments[] = {m_swapchainImageViews[i], m_depthImageView};
+        fci.pAttachments = attachments;
+
+        result = vkCreateFramebuffer(m_device, &fci, nullptr, &m_framebuffers[i]);
+        printResult(result, "Framebuffer creation result");
+    }
 }
 
 std::vector<char> readFile(const std::string & pathToShader)
@@ -479,7 +551,6 @@ std::vector<char> readFile(const std::string & pathToShader)
     return buffer;
 }
 
-#if 1
 void Example::createPipeline(void)
 {
     /*
@@ -494,10 +565,48 @@ void Example::createPipeline(void)
     vkAllocateDescriptorSets -> VkDescriptorSet
     |-> VkDescriptorSetAllocateInfo
         |-> VkDescriptorSetLayout
-
-    
     */
+    /* Get memory requirements for model */
     VkResult result;
+    uint32_t queueFamilyIndices = {0};
+    VkBufferCreateInfo bci = 
+    {
+        .sType                  = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext                  = nullptr,
+        .flags                  = 0,
+        .size                   = sizeof(my_cube),
+        .usage                  = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .sharingMode            = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount  = 1,
+        .pQueueFamilyIndices    = &queueFamilyIndices,
+    };
+    result = vkCreateBuffer(m_device, &bci, nullptr, &m_modelBuffer);
+    printResult(result, "Buffer creation result");
+
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(m_device, m_modelBuffer, &memoryRequirements);
+
+    VkMemoryAllocateInfo mai = 
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .allocationSize = memoryRequirements.size,
+        .memoryTypeIndex = 0,
+    };
+    result = vkAllocateMemory(m_device, &mai, nullptr, &m_modelBufferMemory);
+    printResult(result, "Memory allocation for buffer result");
+
+    result = vkBindBufferMemory(m_device, m_modelBuffer, m_modelBufferMemory, 0u);
+    printResult(result, "Binding memory result");
+
+    /* Load model data into memory */
+    void * data;
+    result = vkMapMemory(m_device, m_modelBufferMemory, 0, memoryRequirements.size, 0, &data);
+    printResult(result, "Mapping memory result");
+
+    memcpy(data, &my_cube[0], bci.size);
+    vkUnmapMemory(m_device, m_modelBufferMemory);
+
 
     VkPipelineInputAssemblyStateCreateInfo piasci = 
     {
@@ -552,7 +661,12 @@ void Example::createPipeline(void)
     
     VkViewport vp[] = 
     {
-        {.x = 0.0f, .y = 0.0f, .width = 640.0f, .height = 480.0f, .minDepth = 0.5f, .maxDepth = 1000.0f}
+        {.x = 0.0f, .y = 0.0f, .width = 640.0f, .height = 480.0f, .minDepth = 0.f, .maxDepth = 1.f}
+    };
+
+    VkRect2D scissors[] = 
+    {
+        {.offset = {0, 0}, .extent = {640u, 480u}}
     };
 
     VkPipelineViewportStateCreateInfo pvsci = 
@@ -562,8 +676,8 @@ void Example::createPipeline(void)
         .flags          = 0,
         .viewportCount  = 1u,
         .pViewports     = vp,
-        .scissorCount   = 0u,
-        .pScissors      = nullptr
+        .scissorCount   = 1u,
+        .pScissors      = scissors,
     };
 
     VkPipelineRasterizationStateCreateInfo prsci = 
@@ -571,8 +685,8 @@ void Example::createPipeline(void)
         .sType                      = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .pNext                      = nullptr,
         .flags                      = 0,
-        .depthClampEnable           = VK_TRUE,
-        .rasterizerDiscardEnable    = VK_TRUE,
+        .depthClampEnable           = VK_FALSE,//VK_TRUE,
+        .rasterizerDiscardEnable    = VK_FALSE,//VK_TRUE,
         .polygonMode                = VK_POLYGON_MODE_FILL,
         .cullMode                   = VK_CULL_MODE_BACK_BIT,
         .frontFace                  = VK_FRONT_FACE_CLOCKWISE,
@@ -636,15 +750,15 @@ void Example::createPipeline(void)
     /* Test */
     VkPipelineMultisampleStateCreateInfo pmssci = 
     {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-        .sampleShadingEnable = VK_FALSE,
-        .minSampleShading = 1.f,
-        .pSampleMask = nullptr,
-        .alphaToCoverageEnable = VK_FALSE,
-        .alphaToOneEnable = VK_FALSE,
+        .sType                  = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .pNext                  = nullptr,
+        .flags                  = 0,
+        .rasterizationSamples   = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable    = VK_FALSE,
+        .minSampleShading       = 1.f,
+        .pSampleMask            = nullptr,
+        .alphaToCoverageEnable  = VK_FALSE,
+        .alphaToOneEnable       = VK_FALSE,
     };
 
     VkPipelineDepthStencilStateCreateInfo pdssci = 
@@ -662,85 +776,77 @@ void Example::createPipeline(void)
 
     VkPipelineColorBlendStateCreateInfo pcbsci = 
     {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .logicOp = VK_LOGIC_OP_COPY,
-        .attachmentCount = 1,
-        .pAttachments = &pcbas,
-        .blendConstants = {0.f, 0.f, 0.f, 0.f},
+        .sType              = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .pNext              = nullptr,
+        .flags              = 0,
+        .logicOpEnable      = VK_FALSE,
+        .logicOp            = VK_LOGIC_OP_CLEAR,
+        .attachmentCount    = 1,
+        .pAttachments       = &pcbas,
+        .blendConstants     = {0.f, 0.f, 0.f, 0.f},
     };
 
-    VkPipelineDynamicStateCreateInfo pdsci = 
+    VkGraphicsPipelineCreateInfo ci =
     {
-
-    };
-
-    VkGraphicsPipelineCreateInfo ci[] =
-    {
-        {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .sType                  = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext                  = nullptr,
-        .flags                  = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-        .stageCount             = sizeof(shaderStagesInfo) / sizeof(shaderStagesInfo[0]),
+        .flags                  = 0,
+        .stageCount             = 2u,
         .pStages                = shaderStagesInfo,
         .pVertexInputState      = &pvisci,
         .pInputAssemblyState    = &piasci,
         .pTessellationState     = nullptr,
         .pViewportState         = &pvsci,
         .pRasterizationState    = &prsci,
-        .pMultisampleState      = nullptr,//&pmssci,
-        .pDepthStencilState     = nullptr,//&pdssci,
-        .pColorBlendState       = nullptr,//&pcbsci,
+        .pMultisampleState      = &pmssci,
+        .pDepthStencilState     = &pdssci,
+        .pColorBlendState       = &pcbsci,
         .pDynamicState          = nullptr,
         .layout                 = m_pipelineLayout,
         .renderPass             = m_renderPass,
         .subpass                = 0u,
         .basePipelineHandle     = VK_NULL_HANDLE,
-        .basePipelineIndex      = 0u,
-        }
+        .basePipelineIndex      = -1,
     };
 
     m_pipelines.resize(1u);
     result = vkCreateGraphicsPipelines(m_device,
                                        VK_NULL_HANDLE,
                                        1,
-                                       ci,
+                                       &ci,
                                        nullptr,
                                        &m_pipelines[0]);
     printResult(result, "Graphics pipeline creation result");
-}
-#else
-void Example::createPipeline(void)
-{
 
+    vkDestroyShaderModule(m_device, vertexShaderModule, nullptr);
+    vkDestroyShaderModule(m_device, fragmentShaderModule, nullptr);
 }
-#endif
 
 void Example::createCommandBuffers(void)
 {
-#if 0
     VkResult result;
 
     VkCommandPoolCreateInfo cpci = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .pNext = NULL,
         .flags = 0,
-        .queueFamilyIndex = getQueueFamilyIndex(),
+        .queueFamilyIndex = 0u,
     };
 
-    vkCreateCommandPool(m_device, &cpci, NULL, &m_commandPool);
+    result = vkCreateCommandPool(m_device, &cpci, NULL, &m_commandPool);
+    printResult(result, "Command pool creation result");
 
-    m_commandBuffers.resize(1u);
+    m_commandBuffers.resize(m_framebuffers.size());
 
     VkCommandBufferAllocateInfo cbai = {
         .sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext              = NULL,
         .commandPool        = m_commandPool,
         .level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = m_commandBuffers.size(),
+        .commandBufferCount = (uint32_t) m_commandBuffers.size(),
     };
-    vkAllocateCommandBuffers(m_device, &cbai, m_commandBuffers.data());
+    result = vkAllocateCommandBuffers(m_device, &cbai, m_commandBuffers.data());
+    printResult(result, "Command buffer allication result");
 
     VkCommandBufferBeginInfo cbbi = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -749,68 +855,112 @@ void Example::createCommandBuffers(void)
         .pInheritanceInfo = NULL,
     };
 
+    VkClearValue clearValues[] = {0.f, 1.f};
     VkRenderPassBeginInfo rpbi = {
         .sType          = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext          = NULL,
         .renderPass     = m_renderPass,
-        .framebuffer    = ,
-        .renderArea     = ,
-        .clearValueCount = ,
-        .pClearValues   = ,
+        .renderArea     = {{0, 0}, {640u, 480u}},
+        .clearValueCount = 2u,
+        .pClearValues   = clearValues,
     };
 
+    VkDeviceSize offsets[] = {0u};
     for (uint8_t i = 0u; i < m_commandBuffers.size(); i++)
     {
-        vkBeginCommandBuffer(m_commandBuffers[i], &cbbi);
+        result = vkBeginCommandBuffer(m_commandBuffers[i], &cbbi);
+        rpbi.framebuffer = m_framebuffers[i];
 
         vkCmdBeginRenderPass(m_commandBuffers[i], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines[0u]);
+        vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, &m_modelBuffer, offsets);
+        vkCmdDraw(m_commandBuffers[i], 36u, 1u, 0u, 0u);
 
         result = vkEndCommandBuffer(m_commandBuffers[i]);
     }
-#endif
+}
+
+void Example::createSemaphores(void)
+{
+    VkSemaphoreCreateInfo sci =
+    {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+    };
+    
+    m_imageReadySemaphores.resize(m_swapchainImages.size());
+    for (uint32_t i = 0u; i < m_swapchainImages.size(); i++)
+    {
+        vkCreateSemaphore(m_device, &sci, nullptr, &m_imageReadySemaphores[i]);
+    }
+
+    vkCreateSemaphore(m_device, &sci, nullptr, &m_renderDoneSemaphore);
+}
+
+void Example::createFences(void)
+{
+    VkFenceCreateInfo fci = 
+    {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+
+    m_drawFences.resize(m_maxInflightSubmissions);
+    for (uint32_t i = 0u; i < m_maxInflightSubmissions; i++)
+    {
+        vkCreateFence(m_device, &fci, nullptr, &m_drawFences[i]);
+    }
 }
 
 void Example::DrawFrame(void)
 {
     VkResult result;
-    uint32_t imageIndex;
+    uint32_t nextImageIndex;
     VkPresentInfoKHR presentInfo;
 
-    result = vkAcquireNextImageKHR(m_device, m_swapchain, 0u, drawSemaphore, drawFence, &imageIndex);
+    vkWaitForFences(m_device, 1, &m_drawFences[m_submissionNumber], VK_TRUE, UINT64_MAX);
+    vkResetFences(m_device, 1, &m_drawFences[m_submissionNumber]);
+
+    result = vkAcquireNextImageKHR(m_device, m_swapchain, UINT64_MAX, m_imageReadySemaphores[m_submissionNumber], VK_NULL_HANDLE, &nextImageIndex);
+
+    VkPipelineStageFlags pipelineStageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     /* Use sync primitive so we don't modify image being read from */
     if (VK_SUCCESS == result)
     {
         /* Queue all rendering commands and transition the image layout  */
-        VkSemaphore waitSemaphores[] = {};
-        VkSemaphore signalSemaphores[] = {};
-        VkPipelineStageFlags pipelineStageFlags[] = {};
-        VkFence fence;
-
         VkSubmitInfo submitInfo = {
             .sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .pNext              = NULL,
             .waitSemaphoreCount = 1u,
-            .pWaitSemaphores    = waitSemaphores,
-            .pWaitDstStageMask  = pipelineStageFlags,
-            .commandBufferCount = (uint32_t)m_commandBuffers.size(),
-            .pCommandBuffers    = m_commandBuffers.data(),
+            .pWaitSemaphores    = &m_imageReadySemaphores[m_submissionNumber],
+            .pWaitDstStageMask  = &pipelineStageFlags,
+            .commandBufferCount = 1u,
+            .pCommandBuffers    = &m_commandBuffers[nextImageIndex],
             .signalSemaphoreCount = 1u,
-            .pSignalSemaphores  = signalSemaphores,
+            .pSignalSemaphores  = &m_renderDoneSemaphore,
         };
-        vkQueueSubmit(queue, 1u, &submitInfo, fence);
+        VkQueue graphicsQueue;
+        vkGetDeviceQueue(m_device, 0u, m_graphics_queue_idx, &graphicsQueue);
+        vkQueueSubmit(graphicsQueue, 1u, &submitInfo, m_drawFences[m_submissionNumber]);
+
+        m_submissionNumber = (m_submissionNumber + 1u) % m_maxInflightSubmissions;
 
         /* Queue the image for presentation */
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.pNext = NULL;
         presentInfo.waitSemaphoreCount = 1u;
-        presentInfo.pWaitSemaphores = &drawSemaphore;
+        presentInfo.pWaitSemaphores = &m_renderDoneSemaphore;
         presentInfo.swapchainCount = 1u;
         presentInfo.pSwapchains = &m_swapchain;
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pImageIndices = &nextImageIndex;
         presentInfo.pResults = NULL;
 
-        result = vkQueuePresentKHR(queue, &presentInfo);
+        VkQueue presentQueue;
+        vkGetDeviceQueue(m_device, 0u, m_present_queue_idx, &presentQueue);
+        result = vkQueuePresentKHR(presentQueue, &presentInfo);
     }
 }
 
@@ -818,11 +968,26 @@ void Example::cleanup(void)
 {
     /* Command pool may be freed only after all command buffers are in pending???/init state??? */
     //vkDestroyCommandPool(m_device, m_commandPool, NULL);
+    vkDestroyBuffer(m_device, m_modelBuffer, nullptr);
+    vkFreeMemory(m_device, m_modelBufferMemory, nullptr);
+
+    vkDestroyImageView(m_device, m_depthImageView, nullptr);
+    vkDestroyImage(m_device, m_depthImage, nullptr);
+    vkFreeMemory(m_device, m_depthImageMemory, nullptr);
+    for (auto & framebuffer : m_framebuffers)
+    {
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+    }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     for (auto imageView : m_swapchainImageViews)
     {
         vkDestroyImageView(m_device, imageView, nullptr);
     }
+    for (auto & pipeline : m_pipelines)
+    {
+        vkDestroyPipeline(m_device, pipeline, nullptr);
+    }
+    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
     vkDestroyRenderPass(m_device, m_renderPass, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
