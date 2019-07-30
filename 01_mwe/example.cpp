@@ -3,32 +3,54 @@
 #include <string>
 #include "example.hpp"
 
+#if 1
+Vertex my_cube[] =
+{
+    /* front side - red */
+    {VERTEX_1, COLOR_RED}, {VERTEX_4, COLOR_RED}, {VERTEX_3, COLOR_RED},
+    {VERTEX_1, COLOR_RED}, {VERTEX_3, COLOR_RED}, {VERTEX_2, COLOR_RED},
+    
+    /* right side - green */
+    {VERTEX_2, COLOR_GREEN}, {VERTEX_3, COLOR_GREEN}, {VERTEX_7, COLOR_GREEN},
+    {VERTEX_2, COLOR_GREEN}, {VERTEX_7, COLOR_GREEN}, {VERTEX_6, COLOR_GREEN},
+    
+    /* left side - blue */
+    {VERTEX_5, COLOR_BLUE}, {VERTEX_8, COLOR_BLUE}, {VERTEX_4, COLOR_BLUE},
+    {VERTEX_5, COLOR_BLUE}, {VERTEX_4, COLOR_BLUE}, {VERTEX_1, COLOR_BLUE},
+
+    /* top side - yellow */
+    {VERTEX_4, COLOR_RG}, {VERTEX_8, COLOR_RG}, {VERTEX_7, COLOR_RG},
+    {VERTEX_4, COLOR_RG}, {VERTEX_7, COLOR_RG}, {VERTEX_3, COLOR_RG},
+    
+    /* bottom side - magenta */
+    {VERTEX_5, COLOR_RB}, {VERTEX_1, COLOR_RB}, {VERTEX_2, COLOR_RB},
+    {VERTEX_5, COLOR_RB}, {VERTEX_2, COLOR_RB}, {VERTEX_6, COLOR_RB},
+
+    /* back side - cyan */
+    {VERTEX_7, COLOR_GB}, {VERTEX_8, COLOR_GB}, {VERTEX_6, COLOR_GB},
+    {VERTEX_6, COLOR_GB}, {VERTEX_8, COLOR_GB}, {VERTEX_5, COLOR_GB},
+};
+#else
 static Vertex my_cube[] =
 {
-    /* front side */
-    {VERTEX_1, COLOR_RED}, {VERTEX_2, COLOR_RED}, {VERTEX_3, COLOR_RED},
-    {VERTEX_1, COLOR_RED}, {VERTEX_4, COLOR_RED}, {VERTEX_3, COLOR_RED},
-    
-    /* right side */
-    {VERTEX_2, COLOR_GREEN}, {VERTEX_5, COLOR_GREEN}, {VERTEX_3, COLOR_GREEN},
-    {VERTEX_5, COLOR_GREEN}, {VERTEX_7, COLOR_GREEN}, {VERTEX_3, COLOR_GREEN},
-    
-    /* left side */
-    {VERTEX_1, COLOR_BLUE}, {VERTEX_6, COLOR_BLUE}, {VERTEX_8, COLOR_BLUE},
-    {VERTEX_1, COLOR_BLUE}, {VERTEX_4, COLOR_BLUE}, {VERTEX_8, COLOR_BLUE},
-
-    /* top side */
-    {VERTEX_4, COLOR_RED}, {VERTEX_7, COLOR_RED}, {VERTEX_3, COLOR_RED},
-    {VERTEX_8, COLOR_RED}, {VERTEX_4, COLOR_RED}, {VERTEX_7, COLOR_RED},
-    
-    /* bottom side */
-    {VERTEX_1, COLOR_RED}, {VERTEX_2, COLOR_RED}, {VERTEX_5, COLOR_RED},
-    {VERTEX_1, COLOR_RED}, {VERTEX_6, COLOR_RED}, {VERTEX_5, COLOR_RED},
-
-    /* back side */
-    {VERTEX_6, COLOR_RED}, {VERTEX_5, COLOR_RED}, {VERTEX_7, COLOR_RED},
-    {VERTEX_6, COLOR_RED}, {VERTEX_8, COLOR_RED}, {VERTEX_7, COLOR_RED},
+    {{0.f, 0.f, 0.f, 1.f}, COLOR_RED}, 
+    {{1.f, 0.f, 0.f, 1.f}, COLOR_RED},
+    {{0.f, 1.f, 0.f, 1.f}, COLOR_RED},
+    {{1.f, 0.f, 0.f, 1.f}, COLOR_RED},
+    {{1.f, 1.f, 0.f, 1.f}, COLOR_RED},
+    {{0.f, 1.f, 0.f, 1.f}, COLOR_RED},
 };
+#endif
+
+uint32_t Example::getCubeSizeBytes(void)
+{
+    return sizeof(my_cube);
+}
+
+uint32_t Example::getCubeVerticesCount(void)
+{
+    return sizeof(my_cube) / sizeof(my_cube[0]);
+}
 
 static void printResult(VkResult result, std::string message)
 {
@@ -855,7 +877,7 @@ void Example::createCommandBuffers(void)
         .pInheritanceInfo = NULL,
     };
 
-    VkClearValue clearValues[] = {0.f, 1.f};
+    VkClearValue clearValues[] = {0.f, 0.f};
     VkRenderPassBeginInfo rpbi = {
         .sType          = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext          = NULL,
@@ -875,8 +897,10 @@ void Example::createCommandBuffers(void)
         vkCmdBeginRenderPass(m_commandBuffers[i], &rpbi, VK_SUBPASS_CONTENTS_INLINE);
         vkCmdBindPipeline(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelines[0u]);
         vkCmdBindVertexBuffers(m_commandBuffers[i], 0, 1, &m_modelBuffer, offsets);
-        vkCmdDraw(m_commandBuffers[i], 36u, 1u, 0u, 0u);
+        uint32_t vertexCount = sizeof(my_cube) / sizeof(my_cube[0]);
+        vkCmdDraw(m_commandBuffers[i], vertexCount, 1u, 0u, 0u);
 
+        vkCmdEndRenderPass(m_commandBuffers[i]);
         result = vkEndCommandBuffer(m_commandBuffers[i]);
     }
 }
@@ -962,7 +986,7 @@ void Example::drawFrame(void)
         VkQueue presentQueue;
         vkGetDeviceQueue(m_device, 0u, m_present_queue_idx, &presentQueue);
         result = vkQueuePresentKHR(presentQueue, &presentInfo);
-        printResult(result, "Presenting image result");
+        //printResult(result, "Presenting image result");
     }
 }
 

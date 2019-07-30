@@ -32,14 +32,26 @@ struct Vertex
 #define COLOR_RB    {1.f, 0.f, 1.f, 1.f}
 #define COLOR_GB    {0.f, 1.f, 1.f, 1.f}
 
-#define VERTEX_1    {0.f, 0.f, 0.f, 1.f}
-#define VERTEX_2    {1.f, 0.f, 0.f, 1.f}
-#define VERTEX_3    {1.f, 1.f, 0.f, 1.f}
-#define VERTEX_4    {0.f, 1.f, 0.f, 1.f}
-#define VERTEX_5    {1.f, 0.f, 1.f, 1.f}
-#define VERTEX_6    {0.f, 0.f, 1.f, 1.f}
-#define VERTEX_7    {1.f, 1.f, 1.f, 1.f}
-#define VERTEX_8    {0.f, 1.f, 1.f, 1.f}
+#if 0
+#define VERTEX_1    {0.f, 0.f, 0.f, 8.f}
+#define VERTEX_2    {1.f, 0.f, 0.f, 8.f}
+#define VERTEX_3    {1.f, -1.f, 0.f, 8.f}
+#define VERTEX_4    {0.f, -1.f, 0.f, 8.f}
+#define VERTEX_5    {0.f, 0.f, 1.f, 8.f}
+#define VERTEX_6    {1.f, 0.f, 1.f, 8.f}
+#define VERTEX_7    {1.f, -1.f, 1.f, 8.f}
+#define VERTEX_8    {0.f, -1.f, 1.f, 8.f}
+#else
+#define VERTEX_1    {-0.5f/4.f, 0.5f/4.f, 0.f/4.f, 1.f}
+#define VERTEX_2    {0.5f/4.f,  0.5f/4.f, 0.f/4.f, 1.f}
+#define VERTEX_3    {0.5f/4.f, -0.5f/4.f, 0.f/4.f, 1.f}
+#define VERTEX_4    {-0.5f/4.f, -0.5f/4.f, 0.f/4.f, 1.f}
+#define VERTEX_5    {-0.5f/4.f, 0.5f/4.f, 1.f/4.f, 1.f}
+#define VERTEX_6    {0.5f/4.f, 0.5f/4.f, 1.f/4.f, 1.f}
+#define VERTEX_7    {0.5f/4.f, -0.5f/4.f, 1.f/4.f, 1.f}
+#define VERTEX_8    {-0.5f/4.f, -0.5f/4.f, 1.f/4.f, 1.f}
+#endif
+
 
 typedef enum
 {
@@ -124,5 +136,8 @@ class Example
         uint32_t getQueueFamilyIndex(void);
 
         void cleanup(void);
+
+        static uint32_t getCubeSizeBytes(void);
+        static uint32_t getCubeVerticesCount(void);
 };
 #endif
