@@ -3,13 +3,14 @@
 #include <string>
 #include "example.hpp"
 
-#if 1
+#if defined USE_GLM
 Vertex my_cube[] =
 {
     /* front side - red */
     {VERTEX_1, COLOR_RED}, {VERTEX_4, COLOR_RED}, {VERTEX_3, COLOR_RED},
     {VERTEX_1, COLOR_RED}, {VERTEX_3, COLOR_RED}, {VERTEX_2, COLOR_RED},
     
+    #if 1
     /* right side - green */
     {VERTEX_2, COLOR_GREEN}, {VERTEX_3, COLOR_GREEN}, {VERTEX_7, COLOR_GREEN},
     {VERTEX_2, COLOR_GREEN}, {VERTEX_7, COLOR_GREEN}, {VERTEX_6, COLOR_GREEN},
@@ -29,16 +30,7 @@ Vertex my_cube[] =
     /* back side - cyan */
     {VERTEX_7, COLOR_GB}, {VERTEX_8, COLOR_GB}, {VERTEX_6, COLOR_GB},
     {VERTEX_6, COLOR_GB}, {VERTEX_8, COLOR_GB}, {VERTEX_5, COLOR_GB},
-};
-#else
-static Vertex my_cube[] =
-{
-    {{0.f, 0.f, 0.f, 1.f}, COLOR_RED}, 
-    {{1.f, 0.f, 0.f, 1.f}, COLOR_RED},
-    {{0.f, 1.f, 0.f, 1.f}, COLOR_RED},
-    {{1.f, 0.f, 0.f, 1.f}, COLOR_RED},
-    {{1.f, 1.f, 0.f, 1.f}, COLOR_RED},
-    {{0.f, 1.f, 0.f, 1.f}, COLOR_RED},
+    #endif
 };
 #endif
 

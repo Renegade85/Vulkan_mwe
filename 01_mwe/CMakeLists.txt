@@ -16,9 +16,9 @@ ELSE()
 MESSAGE(FATAL_ERROR "Unable to loacate Vulkan SDK folder!")
 ENDIF()
 
-ADD_SUBDIRECTORY(./glfw)
+ADD_SUBDIRECTORY(./glfw ./glm)
 
-INCLUDE_DIRECTORIES(${Vulkan_INCLUDE_DIRS} ./glfw/include)
+INCLUDE_DIRECTORIES(${Vulkan_INCLUDE_DIRS} ./glfw/include ./glm/glm)
 LINK_DIRECTORIES(${Vulkan_LIBRARY})
 ADD_EXECUTABLE (example example.cpp main.cpp)
 TARGET_LINK_LIBRARIES(example glfw  ${GLFW_LIBRARIES} ${Vulkan_LIBRARIES})
